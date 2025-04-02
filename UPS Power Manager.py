@@ -251,6 +251,10 @@ update_progress()
 
 load_devices()  # ⬅️ Load stored devices before starting the UI
 
+#Create a button to load devices
+load_button = ttk.Button(mainframe, text="Load Devices", command=load_devices)
+load_button.grid(column=5, row=4, columnspan=1, sticky=(W, E), padx=100, pady=10)
+
 # Run the Tkinter event loop
 root.mainloop()
 
