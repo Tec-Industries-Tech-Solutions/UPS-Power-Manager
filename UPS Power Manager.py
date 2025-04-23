@@ -54,7 +54,7 @@ def load_devices():
     except FileNotFoundError:
         print("No saved device data found.")
 
-# Set the window size to to 4K
+# Set the window size to to 1440p
 root = tk.Tk()
 root.geometry("2560x1440")
 root.title("UPS Power Manager")
@@ -106,7 +106,7 @@ device_selected_option.set("-")  # Set the default value
 # Create the device name dropdown (drop-down box)
 device_selection_dropdown = tk.OptionMenu(mainframe, device_selected_option, "-")
 device_selection_dropdown.config(bg="light gray", fg="black", activebackground="black", activeforeground="light gray")  # Set colors
-device_selection_dropdown.grid(column=4, row=1, columnspan=1, sticky=(E, S), padx=5, pady=10)  # Adjust column and reduce padding
+device_selection_dropdown.grid(column=4, row=1, columnspan=1, sticky=(W, S), padx=5, pady=10)  # Adjust column and reduce padding
 
 def update_device_dropdown():
     """Recreate the dropdown to reflect updated device names."""
@@ -140,7 +140,7 @@ def show_selection():
 
 # Create the Select button for the device count
 select_button = ttk.Button(mainframe, text="Select", command=show_selection)
-select_button.grid(column=0, row=1, columnspan=1, sticky=(W, E, S), padx=100, pady=0)
+select_button.grid(column=0, row=2, columnspan=1, sticky=(W, E, N), padx=100, pady=0)
 
 #Name of device
 device_name_entry = tk.Entry(mainframe, width=45, bg="gray", fg="black")
@@ -254,6 +254,54 @@ load_devices()  # ⬅️ Load stored devices before starting the UI
 #Create a button to load devices
 load_button = ttk.Button(mainframe, text="Load Devices", command=load_devices)
 load_button.grid(column=5, row=4, columnspan=1, sticky=(W, E), padx=100, pady=10)
+
+#Create Device Tab class
+class DeviceTab:
+    """Base class for a notebook tab."""
+    def __init__(self, notebook, title):
+        self.frame = ttk.Frame(notebook)
+        notebook.add(self.frame, text=title)
+        self.setup_ui()
+
+    def setup_ui(self):
+        """Override this method in child classes to set up specific UI."""
+        pass
+
+class TabOne(DeviceTab):
+    """First tab with device information."""
+    def __init__(self, notebook):
+        super().__init__(notebook, "Device Info")
+
+    def setup_ui(self):
+        label = tk.Label(self.frame, text="Device Information", font=("Garamond", 20))
+        label.pack(pady=10)
+
+class TabTwo(DeviceTab):
+    """Second tab with additional functionality."""
+    def __init__(self, notebook):
+        super().__init__(notebook, "Settings")
+
+    def setup_ui(self):
+        label = tk.Label(self.frame, text="Settings Tab", font=("Garamond", 20))
+        label.pack(pady=10)
+
+
+# Function to open the device window
+def open_device_window():
+    """Open a new window to display device information."""
+    device_window = tk.Tk()
+    device_window.geometry("2560x1440")
+    device_window.title("Device")
+
+#Create a list of devices
+choices = ["1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12", "13", "14", "15", "16", "17", "18", "19", "20"]
+choicesvar = StringVar(value=choices)
+l = Listbox(root, listvariable=choicesvar)
+l.grid(column=5, row=5, columnspan=1, sticky=(W, E), padx=100, pady=10)
+
+# Create button to open device window
+device_window_button = ttk.Button(mainframe, text="Device Window", command=open_device_window)
+device_window_button.grid(column=5, row=5, columnspan=1, sticky=(W, E), padx=100, pady=10)
 
 # Run the Tkinter event loop
 root.mainloop()
