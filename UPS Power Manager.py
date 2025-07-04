@@ -9,19 +9,92 @@ import json
 from tkinter import ttk, filedialog, messagebox
 
 class Device:
-    def __init__(self, number, name, port):
+    def __init__(self, number, name, port, status, logs=None, settings=None):
         self.number = number
         self.name = name
         self.port = port
+        self.logs = logs or []
+        self.settings = settings or {}
+        self.status = status
 
     def to_dict(self):
         """Convert a Device instance to a dictionary for JSON storage."""
-        return {"number": self.number, "name": self.name, "port": self.port}
+        return {
+            "number": self.number,
+            "name": self.name,
+            "port": self.port,
+            "logs": self.logs,
+            "settings": self.settings,
+        }
 
     @staticmethod
     def from_dict(data):
         """Convert dictionary data back to a Device instance."""
-        return Device(data["number"], data["name"], data["port"])
+        return Device(
+            data["number"],
+            data["name"],
+            data["port"],
+            data.get("logs", []),
+            data.get("settings", {}),
+        )
+
+# DeviceWindow class for displaying device information in a new window
+class DeviceWindow:
+    def __init__(self, root, device: Device):
+        self.device = device
+        self.window = tk.Toplevel(root)
+        self.window.configure(bg="#DCDAD6")
+        self.window.title(f"Device {device.number}: {device.name}")
+        self.window.geometry("2560x1440")
+        self.window.grid_rowconfigure(0, weight=1)
+        self.window.grid_columnconfigure(0, weight=1)
+        self.build_ui()
+
+    def build_ui(self):
+        frame = tk.Frame(self.window, bg="#DCDAD6", padx=20, pady=20)
+        frame.grid(row=0, column=0, sticky="nsew")
+        
+        # Configure the weights for the mainframe
+        for i in range(12):  # Assuming 12 rows
+            frame.grid_rowconfigure(i, weight=1)
+        for i in range(6):  # Assuming 6 columns
+            frame.grid_columnconfigure(i, weight=1)
+
+        tk.Label(frame, text="Device Information", font=("Garamond", 30), bg="light gray", fg="black").grid(row=0, column=0, columnspan=1, sticky="w", pady=10)
+        tk.Label(frame, text=f"Name: {self.device.name}", font=("Garamond", 20), bg="light gray", fg="black").grid(row=1, column=0, columnspan=2, sticky="w", pady=10)
+        tk.Label(frame, text=f"Port: {self.device.port}", font=("Garamond", 20), bg="light gray", fg="black").grid(row=2, column=0, columnspan=2, sticky="w", pady=10)
+        tk.Label(frame, text="Settings", font=("Garamond", 30), bg="light gray", fg="black").grid(row=0, column=5, columnspan=2, sticky="W", pady=10)
+        tk.Label(frame, text="Select condition for shutdown", font=("Garamond", 20), bg="light gray", fg="black").grid(row=1, column=5, columnspan=1, sticky="W", pady=10)
+       # Create a Listbox widget
+        listbox = tk.Listbox(frame)
+        listbox.grid(row=2, column=5, sticky="nsew")  # Adjust placement as needed
+
+        # Add items to the Listbox
+        items = ["Apple", "Banana", "Cherry", "Date", "Elderberry"]
+        for item in items:
+            listbox.insert(tk.END, item)
+
+        tk.Button(
+                frame,
+                text="Save Settings",
+                command=self.save_settings,
+                bg="#DCDAD6",
+                fg="black",
+                activebackground="black",
+                activeforeground="light gray"
+            ).grid(row=3, column=0, columnspan=2, pady=20)
+
+
+        def save_settings(self):
+            try:
+                threshold = int(self.threshold_var.get())
+                if 0 <= threshold <= 100:
+                    self.device.settings["shutoff_threshold"] = threshold
+                    print(f"Shutoff threshold set to {threshold}% for device {self.device.name}")
+                else:
+                    messagebox.showerror("Invalid Value", "Please enter a value between 0 and 100.")
+            except ValueError:
+                messagebox.showerror("Invalid Input", "Please enter a valid number.")
 
 import json
 
@@ -103,25 +176,43 @@ dropdown.lift()
 device_selected_option = tk.StringVar()
 device_selected_option.set("-")  # Set the default value
 
+#Define a variable to store the device window option
+global device_window_option
+device_window_option = tk.StringVar()
+device_window_option.set("-") #Set the default value
+
 # Create the device name dropdown (drop-down box)
 device_selection_dropdown = tk.OptionMenu(mainframe, device_selected_option, "-")
 device_selection_dropdown.config(bg="light gray", fg="black", activebackground="black", activeforeground="light gray")  # Set colors
 device_selection_dropdown.grid(column=4, row=1, columnspan=1, sticky=(W, S), padx=5, pady=10)  # Adjust column and reduce padding
 
+# Create the device window dropdown (drop-down box)
+device_window_dropdown = tk.OptionMenu(mainframe, device_window_option, "-")
+device_window_dropdown.config(bg="light gray", fg="black", activebackground="black", activeforeground="light gray")  # Set colors
+device_window_dropdown.grid(column=5, row=5, columnspan=1, sticky=(E), padx=5, pady=10)  # Adjust column and reduce padding
+
 def update_device_dropdown():
     """Recreate the dropdown to reflect updated device names."""
     global device_selection_dropdown
+    global device_window_dropdown
 
     device_options = [f"{device.number} - {device.name}" for device in device_objects]  # Show number & name
     
     # Remove the old dropdown
     device_selection_dropdown.destroy()
+    device_window_dropdown.destroy()
 
-    # Create a new dropdown with updated values
+    # Create a new dropdown with updated values (selection)
     device_selected_option.set("-")  # Reset selection
     device_selection_dropdown = tk.OptionMenu(mainframe, device_selected_option, *device_options)
     device_selection_dropdown.config(bg="light gray", fg="black", activebackground="black", activeforeground="light gray")
     device_selection_dropdown.grid(column=4, row=1, columnspan=1, sticky=(E, S), padx=5, pady=10)
+
+    # Create a new dropdown with updated values (window)
+    device_window_option.set("-")  # Reset selection
+    device_window_dropdown = tk.OptionMenu(mainframe, device_window_option, *device_options)
+    device_window_dropdown.config(bg="light gray", fg="black", activebackground="black", activeforeground="light gray")
+    device_window_dropdown.grid(column=5, row=5, columnspan=1, sticky=(E), padx=5, pady=10)
 
 
 # Function to update the label with the selected option and update device dropdown options
@@ -255,53 +346,19 @@ load_devices()  # ⬅️ Load stored devices before starting the UI
 load_button = ttk.Button(mainframe, text="Load Devices", command=load_devices)
 load_button.grid(column=5, row=4, columnspan=1, sticky=(W, E), padx=100, pady=10)
 
-#Create Device Tab class
-class DeviceTab:
-    """Base class for a notebook tab."""
-    def __init__(self, notebook, title):
-        self.frame = ttk.Frame(notebook)
-        notebook.add(self.frame, text=title)
-        self.setup_ui()
-
-    def setup_ui(self):
-        """Override this method in child classes to set up specific UI."""
-        pass
-
-class TabOne(DeviceTab):
-    """First tab with device information."""
-    def __init__(self, notebook):
-        super().__init__(notebook, "Device Info")
-
-    def setup_ui(self):
-        label = tk.Label(self.frame, text="Device Information", font=("Garamond", 20))
-        label.pack(pady=10)
-
-class TabTwo(DeviceTab):
-    """Second tab with additional functionality."""
-    def __init__(self, notebook):
-        super().__init__(notebook, "Settings")
-
-    def setup_ui(self):
-        label = tk.Label(self.frame, text="Settings Tab", font=("Garamond", 20))
-        label.pack(pady=10)
-
 
 # Function to open the device window
 def open_device_window():
-    """Open a new window to display device information."""
-    device_window = tk.Tk()
-    device_window.geometry("2560x1440")
-    device_window.title("Device")
-
-#Create a list of devices
-choices = ["1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12", "13", "14", "15", "16", "17", "18", "19", "20"]
-choicesvar = StringVar(value=choices)
-l = Listbox(root, listvariable=choicesvar)
-l.grid(column=5, row=5, columnspan=1, sticky=(W, E), padx=100, pady=10)
+    if device_window_option.get() == "-":
+        return
+    selected_index = int(device_window_option.get().split(" - ")[0]) - 1
+    selected_device = device_objects[selected_index]
+    DeviceWindow(root, selected_device)
 
 # Create button to open device window
 device_window_button = ttk.Button(mainframe, text="Device Window", command=open_device_window)
 device_window_button.grid(column=5, row=5, columnspan=1, sticky=(W, E), padx=100, pady=10)
+
 
 # Run the Tkinter event loop
 root.mainloop()
