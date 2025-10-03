@@ -191,6 +191,9 @@ for i in range(12):  # Assuming 12 rows
     mainframe.grid_rowconfigure(i, weight=1)
 for i in range(4):  # Assuming 4 columns
     mainframe.grid_columnconfigure(i, weight=1)
+# Ensure column 5 does not stretch
+mainframe.grid_columnconfigure(5, weight=0)
+mainframe.grid_columnconfigure(4, weight=0)
 
 # Add a label and position it using grid
 label = tk.Label(root, text="UPS Power Manager", font=("Garamond", 70), fg="black", bg="light gray")
@@ -227,8 +230,9 @@ device_window_option.set("-") #Set the default value
 
 # Create the device name dropdown (drop-down box) using helper
 device_selection_dropdown = create_option_menu(mainframe, device_selected_option, ["-"], column=4, row=1, columnspan=1)
-# Create the device window dropdown (drop-down box) using helper
-device_window_dropdown = create_option_menu(mainframe, device_window_option, ["-"], column=5, row=5, columnspan=1)
+device_window_dropdown = create_option_menu(mainframe, device_window_option, ["-"], column=4, row=5)
+device_window_dropdown.config(width=12)
+device_window_dropdown.grid(sticky='w', padx=5, pady=10)
 
 
 def update_device_dropdown() -> None:
@@ -244,8 +248,11 @@ def update_device_dropdown() -> None:
     # Create a new dropdown with updated values using helper
     device_selected_option.set("-")
     device_selection_dropdown = create_option_menu(mainframe, device_selected_option, device_options, column=4, row=1, columnspan=1)
+    device_selection_dropdown.grid(sticky='w', padx=5, pady=10)
     device_window_option.set("-")
-    device_window_dropdown = create_option_menu(mainframe, device_window_option, device_options, column=5, row=5, columnspan=1)
+    device_window_dropdown = create_option_menu(mainframe, device_window_option, device_options, column=4, row=5)
+    device_window_dropdown.config(width=12)
+    device_window_dropdown.grid(sticky='w', padx=5, pady=10)
 
 
 # UI refresh helper
@@ -386,7 +393,7 @@ progress_bar.configure(style="TProgressbar")
 
 #Label devices
 device_label = tk.Label(mainframe, text="Enter the name for each device connected", font=("Garamond", 20), bg="light gray", fg="black")
-device_label.grid(column=5, row=1, columnspan=1, sticky='nw', padx=20, pady=10)
+device_label.grid(column=5, row=0, columnspan=1, sticky='sw', padx=20, pady=10)
 
 #Create Save Devices button
 save_button = ttk.Button(mainframe, text="Save Devices", command=save_devices)
@@ -448,12 +455,8 @@ def remove_device() -> None:
 
 # Create button to open device window
 device_window_button = ttk.Button(mainframe, text="Device Window", command=open_device_window)
-device_window_button.grid(column=5, row=5, columnspan=1, sticky='we', padx=100, pady=10)
-
-
-remove_device_button = ttk.Button(mainframe, text="Remove Device", command=remove_device)
-remove_device_button.grid(column=4, row=2, columnspan=1, sticky='we', padx=5, pady=10)
-
+device_window_button.grid(column=5, row=5, columnspan=1, padx=0, pady=10)
+device_window_button.config(width=12)
 
 # Footer label at the bottom of the UI
 footer_label = tk.Label(root, text=f"Version {VERSION} — Last updated {LAST_UPDATE}", font=("Garamond", 12), bg="light gray", fg="gray")
