@@ -1,4 +1,7 @@
 #Import Libaries 
+# Import required libraries
+import os
+import sys
 import tkinter as tk
 from tkinter import ttk, filedialog, messagebox
 import subprocess
@@ -37,7 +40,10 @@ class Device:
         )
 
 # DeviceWindow class for displaying device information in a new window
+
+# DeviceWindow class for displaying device information in a new window
 class DeviceWindow:
+    """Window to display and edit settings for a specific device."""
     def __init__(self, root, device: Device):
         self.device = device
         self.window = tk.Toplevel(root)
@@ -49,46 +55,54 @@ class DeviceWindow:
         self.build_ui()
 
     def build_ui(self):
+        """Build the device settings UI."""
         frame = tk.Frame(self.window, bg="#DCDAD6", padx=20, pady=20)
         frame.grid(row=0, column=0, sticky="nsew")
 
-        #Defone threshold_var
-        self.threshold_var = tk.StringVar()
-        entry = tk.Entry(frame, textvariable=self.threshold_var)
-        entry.grid(row=2, column=0, padx=10, pady=10)
-        
-        # Configure the weights for the mainframe
+        # Configure the weights for the frame
         for i in range(12):  # Assuming 12 rows
             frame.grid_rowconfigure(i, weight=1)
         for i in range(6):  # Assuming 6 columns
             frame.grid_columnconfigure(i, weight=1)
 
-        tk.Label(frame, text="Device Information", font=("Garamond", 30), bg="light gray", fg="black").grid(row=0, column=0, columnspan=1, sticky="w", pady=10)
+        # Device Information Section
+        tk.Label(frame, text="Device Information", font=("Garamond", 30), bg="light gray", fg="black").grid(row=0, column=0, columnspan=2, sticky="w", pady=10)
         tk.Label(frame, text=f"Name: {self.device.name}", font=("Garamond", 20), bg="light gray", fg="black").grid(row=1, column=0, columnspan=2, sticky="w", pady=10)
         tk.Label(frame, text=f"Port: {self.device.port}", font=("Garamond", 20), bg="light gray", fg="black").grid(row=2, column=0, columnspan=2, sticky="w", pady=10)
-        tk.Label(frame, text="Settings", font=("Garamond", 30), bg="light gray", fg="black").grid(row=0, column=5, columnspan=2, sticky="W", pady=10)
-        tk.Label(frame, text="Select condition for shutdown", font=("Garamond", 20), bg="light gray", fg="black").grid(row=1, column=5, columnspan=1, sticky="W", pady=10)
-       # Create a Listbox widget
-        listbox = tk.Listbox(frame)
-        listbox.grid(row=2, column=5, sticky="nsew")  # Adjust placement as needed
 
-        # Add items to the Listbox
+        # Settings Section
+        tk.Label(frame, text="Settings", font=("Garamond", 30), bg="light gray", fg="black").grid(row=0, column=4, columnspan=2, sticky="w", pady=10)
+        tk.Label(frame, text="Select condition for shutdown", font=("Garamond", 20), bg="light gray", fg="black").grid(row=1, column=4, columnspan=2, sticky="w", pady=10)
+
+        # Listbox for shutdown condition
+        self.shutdown_condition_listbox = tk.Listbox(frame)
+        self.shutdown_condition_listbox.grid(row=2, column=4, columnspan=2, sticky="nsew", padx=10, pady=10)  # Consistent sticky
         items = ["Time", "Battery Percentage", "Cherry", "Date", "Elderberry"]
         for item in items:
-            listbox.insert(tk.END, item)
+            self.shutdown_condition_listbox.insert(tk.END, item)
 
-        tk.Button(
-                frame,
-                text="Save Settings",
-                command=self.save_settings,
-                bg="#DCDAD6",
-                fg="black",
-                activebackground="black",
-                activeforeground="light gray"
-            ).grid(row=3, column=0, columnspan=2, pady=20)
+        # Threshold Entry
+        self.threshold_var = tk.StringVar()
+        threshold_label = tk.Label(frame, text="Shutoff Threshold (%)", font=("Garamond", 18), bg="light gray", fg="black")
+        threshold_label.grid(row=3, column=0, columnspan=2, sticky="w", pady=10)
+        threshold_entry = tk.Entry(frame, textvariable=self.threshold_var)
+        threshold_entry.grid(row=3, column=2, columnspan=2, sticky="w", padx=10, pady=10)
 
+        # Save Settings Button
+        save_settings_button = tk.Button(
+            frame,
+            text="Save Settings",
+            command=self.save_settings,
+            font=("Garamond", 18),
+            bg="light gray",
+            fg="black",
+            activebackground="black",
+            activeforeground="light gray"
+        )
+        save_settings_button.grid(row=4, column=0, columnspan=6, sticky="ew", pady=20)
 
     def save_settings(self):
+        """Save device settings from the UI."""
         try:
             threshold = int(self.threshold_var.get())
             if 0 <= threshold <= 100:
@@ -99,34 +113,41 @@ class DeviceWindow:
         except ValueError:
             messagebox.showerror("Invalid Input", "Please enter a valid number.")
 
+
+# Constants
 SAVE_FILE = "device_data.json"  # File for storage
 
+
 def save_devices():
-    """Save device list to a JSON file and force file creation."""
+    """Save device list to a JSON file with error handling."""
     if not device_objects:
         print("No devices to save.")
         return
-
     try:
-        with open(SAVE_FILE, "w") as file:
+        tmp_file = SAVE_FILE + ".tmp"
+        with open(tmp_file, "w") as file:
             json.dump([device.to_dict() for device in device_objects], file, indent=4)
+        os.replace(tmp_file, SAVE_FILE)
         print("Device data saved successfully.")
     except Exception as e:
         print(f"Error saving devices: {e}")
 
 
 def load_devices():
-    """Load device list from a JSON file."""
+    """Load device list from a JSON file with error handling."""
     global device_objects
     try:
         with open(SAVE_FILE, "r") as file:
             data = json.load(file)
             device_objects = [Device.from_dict(device) for device in data]
+        if device_objects:
             update_device_dropdown()  # Refresh UI dropdown
-            result_label.config(text=f"{len(device_objects)} devices loaded.")
-            print("Device data loaded.")
+        result_label.config(text=f"{len(device_objects)} devices loaded.")
+        print("Device data loaded.")
     except FileNotFoundError:
         print("No saved device data found.")
+    except Exception as e:
+        print(f"Error loading devices: {e}")
 
 # Set the window size to to 1440p
 root = tk.Tk()
@@ -191,14 +212,15 @@ device_window_dropdown = tk.OptionMenu(mainframe, device_window_option, "-")
 device_window_dropdown.config(bg="light gray", fg="black", activebackground="black", activeforeground="light gray")  # Set colors
 device_window_dropdown.grid(column=5, row=5, columnspan=1, sticky=(tk.E), padx=5, pady=10)  # Adjust column and reduce padding
 
+
 def update_device_dropdown():
-    """Recreate the dropdown to reflect updated device names."""
+    """Recreate the dropdowns to reflect updated device names."""
     global device_selection_dropdown
     global device_window_dropdown
 
     device_options = [f"{device.number} - {device.name}" for device in device_objects]  # Show number & name
-    
-    # Remove the old dropdown
+
+    # Remove the old dropdowns
     device_selection_dropdown.destroy()
     device_window_dropdown.destroy()
 
@@ -212,20 +234,26 @@ def update_device_dropdown():
     device_window_option.set("-")  # Reset selection
     device_window_dropdown = tk.OptionMenu(mainframe, device_window_option, *device_options)
     device_window_dropdown.config(bg="light gray", fg="black", activebackground="black", activeforeground="light gray")
-    device_window_dropdown.grid(column=5, row=5, columnspan=1, sticky=(tk.E), padx=5, pady=10)
+    device_window_dropdown.grid(column=5, row=5, columnspan=1, sticky=(tk.W, tk.E), padx=5, pady=10)
 
 
 # Function to update the label with the selected option and update device dropdown options
 def show_selection():
+    """Handle device count selection, update device list and dropdowns."""
     global devices_count, device_objects
-    devices_count = int(selected_option.get())
+    try:
+        devices_count = int(selected_option.get())
+    except Exception as e:
+        messagebox.showerror("Invalid Selection", "Please select a valid device count.")
+        return
     result_label.config(text=f"{devices_count} devices are connected to the UPS")
     device_objects = []
     for i in range(devices_count):
         device = Device(i + 1, f"Device_{i+1}", f"Port_{i+1}", status="Disconnected")
         device_objects.append(device)
         print("Creating device:", i+1)
-    update_device_dropdown()  # Refresh dropdown menu
+    if device_objects:
+        update_device_dropdown()  # Refresh dropdown menu
     save_devices()  # ⬅️ Ensure this is at the end!
 
 # Create the Select button for the device count
@@ -241,29 +269,40 @@ device_names = []
 # Define a list to store the device names
 device_name_list = []
 
+
 # Get device name and update the dropdown option
 def get_device_name():
     """Update the selected device's name and refresh dropdown."""
     device_name_entry_value = device_name_entry.get()
     if device_selected_option.get() == "-":
         return
-
-    selected_index = int(device_selected_option.get().split(" - ")[0]) - 1  # Get device number
-    device_objects[selected_index].name = device_name_entry_value  # Update name in object
-
-    update_device_dropdown()  # Refresh dropdown with updated names
-    device_name_entry.delete(0, tk.END)
+    try:
+        selected_index = int(device_selected_option.get().split(" - ")[0]) - 1  # Get device number
+        if 0 <= selected_index < len(device_objects):
+            device_objects[selected_index].name = device_name_entry_value  # Update name in object
+            update_device_dropdown()  # Refresh dropdown with updated names
+            device_name_entry.delete(0, tk.END)
+        else:
+            messagebox.showerror("Error", "Selected device index out of range.")
+    except Exception as e:
+        messagebox.showerror("Error", f"Could not update device name: {e}")
 
 
 # Create the Select button for the device selection
 device_select_button = ttk.Button(mainframe, text="Select", command=get_device_name)
 device_select_button.grid(column=5, row=2, columnspan=1, sticky=(tk.W, tk.E, tk.N), padx=100, pady=10)
 
+# Battery level (global)
 battery_level = 0
 
 # Function to fetch the battery level using the upsc command
-def fetch_battery_level(ups_name="ups"):
+def fetch_battery_level(ups_name=None):
     """Fetch UPS data using the upsc command locally."""
+    if not ups_name:
+        ups_name = "ups"
+        # Try to use device name if available
+        if device_objects:
+            ups_name = device_objects[0].name
     command = ["upsc", ups_name]
     try:
         result = subprocess.run(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
@@ -284,12 +323,11 @@ def fetch_battery_level(ups_name="ups"):
 
 # Function to update the progress bar and schedule the next update
 def update_progress():
-    print("Updating progress...")  # Debug print
+    """Update the battery level progress bar and label."""
+    global battery_level
     battery_level = fetch_battery_level()  # Get the current battery level
-    print(f"Updating progress bar with battery level: {battery_level}%")  # Debug print
     progress_bar["value"] = battery_level  # Update progress bar
     percentage_label.config(text=f"{battery_level}%")  # Update label
-    
     # Schedule the function to run again after 5000 milliseconds (5 seconds)
     root.after(5000, update_progress)
 
@@ -349,16 +387,44 @@ load_button.grid(column=5, row=4, columnspan=1, sticky=(tk.W, tk.E), padx=100, p
 
 # Function to open the device window
 def open_device_window():
+    """Open a settings window for the selected device."""
     if device_window_option.get() == "-":
         return
-    selected_index = int(device_window_option.get().split(" - ")[0]) - 1
-    selected_device = device_objects[selected_index]
-    DeviceWindow(root, selected_device)
+    try:
+        selected_index = int(device_window_option.get().split(" - ")[0]) - 1
+        if 0 <= selected_index < len(device_objects):
+            selected_device = device_objects[selected_index]
+            DeviceWindow(root, selected_device)
+        else:
+            messagebox.showerror("Error", "Selected device index out of range.")
+    except Exception as e:
+        messagebox.showerror("Error", f"Could not open device window: {e}")
+
+
+# Function to remove a device and update dropdowns accordingly
+def remove_device():
+    """Remove the selected device from the device list and update dropdowns."""
+    if device_selected_option.get() == "-":
+        return
+    try:
+        selected_index = int(device_selected_option.get().split(" - ")[0]) - 1
+        if 0 <= selected_index < len(device_objects):
+            del device_objects[selected_index]
+            update_device_dropdown()
+            save_devices()
+            result_label.config(text=f"{len(device_objects)} devices are connected to the UPS")
+        else:
+            messagebox.showerror("Error", "Selected device index out of range.")
+    except Exception as e:
+        messagebox.showerror("Error", f"Could not remove device: {e}")
 
 # Create button to open device window
 device_window_button = ttk.Button(mainframe, text="Device Window", command=open_device_window)
 device_window_button.grid(column=5, row=5, columnspan=1, sticky=(tk.W, tk.E), padx=100, pady=10)
 
+
+remove_device_button = ttk.Button(mainframe, text="Remove Device", command=remove_device)
+remove_device_button.grid(column=4, row=2, columnspan=1, sticky=(tk.W, tk.E), padx=5, pady=10)
 
 # Run the Tkinter event loop
 root.mainloop()
