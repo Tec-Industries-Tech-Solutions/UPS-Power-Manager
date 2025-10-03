@@ -223,7 +223,7 @@ def show_selection():
 
     device_objects = []
     for i in range(devices_count):
-        device = Device(i + 1, f"Device_{i+1}", f"Port_{i+1}")
+        device = Device(i + 1, f"Device_{i+1}", f"Port_{i+1}", status="Disconnected")
         device_objects.append(device)
 
     update_device_dropdown()  # Refresh dropdown menu

@@ -1,0 +1,37 @@
+[
+    {
+        "number": 1,
+        "name": "Device_1",
+        "port": "Port_1",
+        "logs": [],
+        "settings": {}
+    },
+    {
+        "number": 2,
+        "name": "Device_2",
+        "port": "Port_2",
+        "logs": [],
+        "settings": {}
+    },
+    {
+        "number": 3,
+        "name": "HEllo",
+        "port": "Port_3",
+        "logs": [],
+        "settings": {}
+    },
+    {
+        "number": 4,
+        "name": "Device_4",
+        "port": "Port_4",
+        "logs": [],
+        "settings": {}
+    },
+    {
+        "number": 5,
+        "name": "Device_5",
+        "port": "Port_5",
+        "logs": [],
+        "settings": {}
+    }
+]
