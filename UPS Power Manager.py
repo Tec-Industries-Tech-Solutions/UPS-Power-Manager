@@ -2,6 +2,7 @@
 import tkinter as tk
 from tkinter import ttk, filedialog, messagebox
 import subprocess
+import json
 
 class Device:
     def __init__(self, number, name, port, status, logs=None, settings=None):
@@ -148,7 +149,7 @@ for i in range(4):  # Assuming 4 columns
 
 # Add a label and position it using grid
 label = tk.Label(root, text="UPS Power Manager", font=("Garamond", 70), fg="black", bg="light gray")
-label.grid(row=0, column=0, columnspan=1, sticky=(W,E))  # Center the label
+label.grid(row=0, column=0, columnspan=1, sticky=(tk.W, tk.E))  # Center the label
 
 devices_count = 0
 device_objects = []  # Stores all created devices
@@ -183,7 +184,7 @@ device_window_option.set("-") #Set the default value
 # Create the device name dropdown (drop-down box)
 device_selection_dropdown = tk.OptionMenu(mainframe, device_selected_option, "-")
 device_selection_dropdown.config(bg="light gray", fg="black", activebackground="black", activeforeground="light gray")  # Set colors
-device_selection_dropdown.grid(column=4, row=1, columnspan=1, sticky=(tk.W, tk.S), padx=5, pady=10)  # Adjust column and reduce padding
+device_selection_dropdown.grid(column=4, row=1, columnspan=1, sticky=(tk.W, tk.E), padx=5, pady=10)  # Adjust column and reduce padding
 
 # Create the device window dropdown (drop-down box)
 device_window_dropdown = tk.OptionMenu(mainframe, device_window_option, "-")
@@ -205,7 +206,7 @@ def update_device_dropdown():
     device_selected_option.set("-")  # Reset selection
     device_selection_dropdown = tk.OptionMenu(mainframe, device_selected_option, *device_options)
     device_selection_dropdown.config(bg="light gray", fg="black", activebackground="black", activeforeground="light gray")
-    device_selection_dropdown.grid(column=4, row=1, columnspan=1, sticky=(tk.E, tk.S), padx=5, pady=10)
+    device_selection_dropdown.grid(column=4, row=1, columnspan=1, sticky=(tk.W, tk.E), padx=5, pady=10)
 
     # Create a new dropdown with updated values (window)
     device_window_option.set("-")  # Reset selection
@@ -231,9 +232,9 @@ def show_selection():
 select_button = ttk.Button(mainframe, text="Select", command=show_selection)
 select_button.grid(column=0, row=2, columnspan=1, sticky=(tk.W, tk.E, tk.N), padx=100, pady=0)
 
-#Name of device
+# Name of device
 device_name_entry = tk.Entry(mainframe, width=45, bg="gray", fg="black")
-device_name_entry.grid(column=5, row=1, columnspan=1, sticky=(tk.W, tk.S), padx=5, pady=10)  # Adjust padding to align with dropdown
+device_name_entry.grid(column=5, row=1, columnspan=1, sticky=(tk.W, tk.E), padx=5, pady=10)  # Adjust padding to align with label
 
 device_names = []
 
@@ -269,10 +270,11 @@ def fetch_battery_level(ups_name="ups"):
         if result.returncode == 0:
             ups_data = {}
             for line in result.stdout.strip().split("\n"):
+                if ":" not in line:
+                    continue
                 key, value = line.split(":", 1)
                 ups_data[key.strip()] = value.strip()
-            battery_level = int(ups_data.get("battery.charge", 0))
-            return battery_level
+            return int(ups_data.get("battery.charge", 0))
         else:
             print(f"Error fetching UPS data for {ups_name}: {result.stderr}")
             return 0
