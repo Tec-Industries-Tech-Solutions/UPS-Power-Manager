@@ -1,12 +1,7 @@
 #Import Libaries 
-from tkinter import *
-from tkinter import ttk
 import tkinter as tk
-import subprocess
-import screeninfo as si 
-from screeninfo import Monitor
-import json
 from tkinter import ttk, filedialog, messagebox
+import subprocess
 
 class Device:
     def __init__(self, number, name, port, status, logs=None, settings=None):
@@ -23,6 +18,7 @@ class Device:
             "number": self.number,
             "name": self.name,
             "port": self.port,
+            "status": self.status,
             "logs": self.logs,
             "settings": self.settings,
         }
@@ -31,11 +27,12 @@ class Device:
     def from_dict(data):
         """Convert dictionary data back to a Device instance."""
         return Device(
-            data["number"],
-            data["name"],
-            data["port"],
-            data.get("logs", []),
-            data.get("settings", {}),
+            number=data["number"],
+            name=data["name"],
+            port=data["port"],
+            status=data.get("status", "Disconnected"),
+            logs=data.get("logs", []),
+            settings=data.get("settings", {}),
         )
 
 # DeviceWindow class for displaying device information in a new window
@@ -53,6 +50,11 @@ class DeviceWindow:
     def build_ui(self):
         frame = tk.Frame(self.window, bg="#DCDAD6", padx=20, pady=20)
         frame.grid(row=0, column=0, sticky="nsew")
+
+        #Defone threshold_var
+        self.threshold_var = tk.StringVar()
+        entry = tk.Entry(frame, textvariable=self.threshold_var)
+        entry.grid(row=2, column=0, padx=10, pady=10)
         
         # Configure the weights for the mainframe
         for i in range(12):  # Assuming 12 rows
@@ -70,7 +72,7 @@ class DeviceWindow:
         listbox.grid(row=2, column=5, sticky="nsew")  # Adjust placement as needed
 
         # Add items to the Listbox
-        items = ["Apple", "Banana", "Cherry", "Date", "Elderberry"]
+        items = ["Time", "Battery Percentage", "Cherry", "Date", "Elderberry"]
         for item in items:
             listbox.insert(tk.END, item)
 
@@ -85,18 +87,16 @@ class DeviceWindow:
             ).grid(row=3, column=0, columnspan=2, pady=20)
 
 
-        def save_settings(self):
-            try:
-                threshold = int(self.threshold_var.get())
-                if 0 <= threshold <= 100:
-                    self.device.settings["shutoff_threshold"] = threshold
-                    print(f"Shutoff threshold set to {threshold}% for device {self.device.name}")
-                else:
-                    messagebox.showerror("Invalid Value", "Please enter a value between 0 and 100.")
-            except ValueError:
-                messagebox.showerror("Invalid Input", "Please enter a valid number.")
-
-import json
+    def save_settings(self):
+        try:
+            threshold = int(self.threshold_var.get())
+            if 0 <= threshold <= 100:
+                self.device.settings["shutoff_threshold"] = threshold
+                print(f"Shutoff threshold set to {threshold}% for device {self.device.name}")
+            else:
+                messagebox.showerror("Invalid Value", "Please enter a value between 0 and 100.")
+        except ValueError:
+            messagebox.showerror("Invalid Input", "Please enter a valid number.")
 
 SAVE_FILE = "device_data.json"  # File for storage
 
@@ -134,7 +134,7 @@ root.title("UPS Power Manager")
 
 # Creating a Content Frame
 mainframe = ttk.Frame(root, padding="3 3 12 12")
-mainframe.grid(column=0, row=1, sticky=(N, W, E, S))
+mainframe.grid(column=0, row=1, sticky=(tk.N, tk.W, tk.E, tk.S))
 
 # Configure the weights for the root window
 root.columnconfigure(0, weight=0)
@@ -147,7 +147,7 @@ for i in range(4):  # Assuming 4 columns
     mainframe.grid_columnconfigure(i, weight=1)
 
 # Add a label and position it using grid
-label = tk.Label(root, text="UPS Power Manager", font=("Garamondx", 70), fg="black", bg="light gray")
+label = tk.Label(root, text="UPS Power Manager", font=("Garamond", 70), fg="black", bg="light gray")
 label.grid(row=0, column=0, columnspan=1, sticky=(W,E))  # Center the label
 
 devices_count = 0
@@ -155,11 +155,11 @@ device_objects = []  # Stores all created devices
 
 # Add a label that says how many devices are connected to the UPS
 result_label = tk.Label(mainframe, text=f"{devices_count} devices are connected to the UPS", font=("Garamond", 20), fg="black", bg="light gray")
-result_label.grid(column=0, row=0, columnspan=1, sticky=(W, N), padx=0, pady=10)  # Align to the center
+result_label.grid(column=0, row=0, columnspan=1, sticky=(tk.W, tk.N), padx=0, pady=10)  # Align to the center
 
 # Add a label above the entry widget
 entry_label = tk.Label(mainframe, text="Select device count (press select to submit)", font=("Garamond", 20), bg="light gray", fg="black")
-entry_label.grid(column=0, row=1, columnspan=1, sticky=(W, N), padx=30, pady=5)  # Center the entry label
+entry_label.grid(column=0, row=1, columnspan=1, sticky=(tk.W, tk.N), padx=30, pady=5)  # Center the entry label
 
 # Define a variable to store the selected option
 selected_option = tk.StringVar()
@@ -169,27 +169,26 @@ selected_option.set("-")  # Set the default value
 options = ["1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12", "13", "14", "15", "16", "17", "18", "19", "20"]
 # Create the OptionMenu (drop-down box)
 dropdown = tk.OptionMenu(mainframe, selected_option, *options)
-dropdown.grid(column=0, row=1, columnspan=1, sticky = (W, E), padx=50, pady=10)  # Place the dropdown in the grid
+dropdown.grid(column=0, row=1, columnspan=1, sticky=(tk.W, tk.E), padx=50, pady=10)  # Place the dropdown in the grid
 dropdown.lift()
 
 # Define a variable to store the selected device option
 device_selected_option = tk.StringVar()
 device_selected_option.set("-")  # Set the default value
 
-#Define a variable to store the device window option
-global device_window_option
+# Define a variable to store the device window option
 device_window_option = tk.StringVar()
 device_window_option.set("-") #Set the default value
 
 # Create the device name dropdown (drop-down box)
 device_selection_dropdown = tk.OptionMenu(mainframe, device_selected_option, "-")
 device_selection_dropdown.config(bg="light gray", fg="black", activebackground="black", activeforeground="light gray")  # Set colors
-device_selection_dropdown.grid(column=4, row=1, columnspan=1, sticky=(W, S), padx=5, pady=10)  # Adjust column and reduce padding
+device_selection_dropdown.grid(column=4, row=1, columnspan=1, sticky=(tk.W, tk.S), padx=5, pady=10)  # Adjust column and reduce padding
 
 # Create the device window dropdown (drop-down box)
 device_window_dropdown = tk.OptionMenu(mainframe, device_window_option, "-")
 device_window_dropdown.config(bg="light gray", fg="black", activebackground="black", activeforeground="light gray")  # Set colors
-device_window_dropdown.grid(column=5, row=5, columnspan=1, sticky=(E), padx=5, pady=10)  # Adjust column and reduce padding
+device_window_dropdown.grid(column=5, row=5, columnspan=1, sticky=(tk.E), padx=5, pady=10)  # Adjust column and reduce padding
 
 def update_device_dropdown():
     """Recreate the dropdown to reflect updated device names."""
@@ -206,13 +205,13 @@ def update_device_dropdown():
     device_selected_option.set("-")  # Reset selection
     device_selection_dropdown = tk.OptionMenu(mainframe, device_selected_option, *device_options)
     device_selection_dropdown.config(bg="light gray", fg="black", activebackground="black", activeforeground="light gray")
-    device_selection_dropdown.grid(column=4, row=1, columnspan=1, sticky=(E, S), padx=5, pady=10)
+    device_selection_dropdown.grid(column=4, row=1, columnspan=1, sticky=(tk.E, tk.S), padx=5, pady=10)
 
     # Create a new dropdown with updated values (window)
     device_window_option.set("-")  # Reset selection
     device_window_dropdown = tk.OptionMenu(mainframe, device_window_option, *device_options)
     device_window_dropdown.config(bg="light gray", fg="black", activebackground="black", activeforeground="light gray")
-    device_window_dropdown.grid(column=5, row=5, columnspan=1, sticky=(E), padx=5, pady=10)
+    device_window_dropdown.grid(column=5, row=5, columnspan=1, sticky=(tk.E), padx=5, pady=10)
 
 
 # Function to update the label with the selected option and update device dropdown options
@@ -220,22 +219,21 @@ def show_selection():
     global devices_count, device_objects
     devices_count = int(selected_option.get())
     result_label.config(text=f"{devices_count} devices are connected to the UPS")
-
     device_objects = []
     for i in range(devices_count):
         device = Device(i + 1, f"Device_{i+1}", f"Port_{i+1}", status="Disconnected")
         device_objects.append(device)
-
+        print("Creating device:", i+1)
     update_device_dropdown()  # Refresh dropdown menu
     save_devices()  # ⬅️ Ensure this is at the end!
 
 # Create the Select button for the device count
 select_button = ttk.Button(mainframe, text="Select", command=show_selection)
-select_button.grid(column=0, row=2, columnspan=1, sticky=(W, E, N), padx=100, pady=0)
+select_button.grid(column=0, row=2, columnspan=1, sticky=(tk.W, tk.E, tk.N), padx=100, pady=0)
 
 #Name of device
 device_name_entry = tk.Entry(mainframe, width=45, bg="gray", fg="black")
-device_name_entry.grid(column=5, row=1, columnspan=1, sticky=(W, S), padx=5, pady=10)  # Adjust padding to align with dropdown
+device_name_entry.grid(column=5, row=1, columnspan=1, sticky=(tk.W, tk.S), padx=5, pady=10)  # Adjust padding to align with dropdown
 
 device_names = []
 
@@ -258,7 +256,7 @@ def get_device_name():
 
 # Create the Select button for the device selection
 device_select_button = ttk.Button(mainframe, text="Select", command=get_device_name)
-device_select_button.grid(column=5, row=2, columnspan=1, sticky=(W, E, N), padx=100, pady=10)
+device_select_button.grid(column=5, row=2, columnspan=1, sticky=(tk.W, tk.E, tk.N), padx=100, pady=10)
 
 battery_level = 0
 
@@ -300,35 +298,35 @@ style.configure("BatteryFrame.TFrame")  # Set the background color to light blue
 
 # Create a frame for the battery information with the custom style and 3D effect
 battery_frame = ttk.Frame(mainframe, padding="10 10 10 10", borderwidth=5, relief="raised", style="BatteryFrame.TFrame")
-battery_frame.grid(column=3, row=2, rowspan=1, columnspan=2, sticky=(N, W, E, S), padx=10, pady=10)
+battery_frame.grid(column=3, row=2, rowspan=1, columnspan=2, sticky=(tk.N, tk.W, tk.E, tk.S), padx=10, pady=10)
 
 fetch_battery_level()
 
 # Create a label to display the battery percentage
 percentage_label = tk.Label(battery_frame, text=f"{battery_level}%", font=("Garamond", 20), bg="light gray", fg="black")
-percentage_label.grid(column=0, row=2, columnspan=2, sticky=(W, E, N), padx=5, pady=10)
+percentage_label.grid(column=0, row=2, columnspan=2, sticky=(tk.W, tk.E, tk.N), padx=5, pady=10)
 
 # Create a progress bar
 progress_bar = ttk.Progressbar(battery_frame, orient="horizontal", length=750, mode="determinate", maximum=100)
-progress_bar.grid(column=0, row=3, columnspan=2, sticky=(W, E, N), padx=10, pady=0)
+progress_bar.grid(column=0, row=3, columnspan=2, sticky=(tk.W, tk.E, tk.N), padx=10, pady=0)
 
 # Create battery level label
 battery_level_label = tk.Label(battery_frame, text="Battery Level", font=("Garamond", 20), bg = "light gray", fg = "black")
-battery_level_label.grid(column=0, row=1, columnspan=2, sticky=(W, E), padx=5, pady=10)
+battery_level_label.grid(column=0, row=1, columnspan=2, sticky=(tk.W, tk.E), padx=5, pady=10)
 
 # Add a style for the progress bar to make it taller
-style.configure("TProgressbar", thickness=500)  # Adjust the thickness value as needed
+style.configure("TProgressbar", thickness=30)  # Adjust the thickness value as needed
 
 # Apply the style to the progress bar
 progress_bar.configure(style="TProgressbar")
 
 #Label devices
 device_label = tk.Label(mainframe, text="Enter the name for each device connected", font=("Garamond", 20), bg="light gray", fg="black")
-device_label.grid(column = 5, row=1, columnspan=1, sticky=(N, W), padx =20, pady= 10)
+device_label.grid(column=5, row=1, columnspan=1, sticky=(tk.N, tk.W), padx=20, pady=10)
 
 #Create Save Devices button
 save_button = ttk.Button(mainframe, text="Save Devices", command=save_devices)
-save_button.grid(column=5, row=3, columnspan=1, sticky=(W, E), padx=100, pady=10)
+save_button.grid(column=5, row=3, columnspan=1, sticky=(tk.W, tk.E), padx=100, pady=10)
 
 
 # Bring the battery_frame to the front
@@ -344,7 +342,7 @@ load_devices()  # ⬅️ Load stored devices before starting the UI
 
 #Create a button to load devices
 load_button = ttk.Button(mainframe, text="Load Devices", command=load_devices)
-load_button.grid(column=5, row=4, columnspan=1, sticky=(W, E), padx=100, pady=10)
+load_button.grid(column=5, row=4, columnspan=1, sticky=(tk.W, tk.E), padx=100, pady=10)
 
 
 # Function to open the device window
@@ -357,7 +355,7 @@ def open_device_window():
 
 # Create button to open device window
 device_window_button = ttk.Button(mainframe, text="Device Window", command=open_device_window)
-device_window_button.grid(column=5, row=5, columnspan=1, sticky=(W, E), padx=100, pady=10)
+device_window_button.grid(column=5, row=5, columnspan=1, sticky=(tk.W, tk.E), padx=100, pady=10)
 
 
 # Run the Tkinter event loop
