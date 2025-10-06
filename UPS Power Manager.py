@@ -93,7 +93,7 @@ class DeviceWindow:
         # Listbox for shutdown condition
         self.shutdown_condition_listbox = tk.Listbox(frame)
         self.shutdown_condition_listbox.grid(row=2, column=4, columnspan=2, sticky="nsew", padx=10, pady=10)  # Consistent sticky
-        items = ["Time", "Battery Percentage", "Cherry", "Date", "Elderberry"]
+        items = ["UPS Time left", "Battery Percentage", "Elapsed time on battery", "UPS load", "Protection offline"]
         for item in items:
             self.shutdown_condition_listbox.insert(tk.END, item)
 
