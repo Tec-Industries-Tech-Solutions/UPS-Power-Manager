@@ -4,13 +4,13 @@ VERSION = "1.0.0"
 LAST_UPDATE = "2025-10-03"
 
 #Import Libaries 
-# Import required libraries
 import os
 import sys
 import tkinter as tk
 from tkinter import ttk, filedialog, messagebox
 import subprocess
 import json
+from typing import Optional
 
 class Device:
     def __init__(self, number, name, port, status, logs=None, settings=None):
@@ -20,6 +20,8 @@ class Device:
         self.logs = logs or []
         self.settings = settings or {}
         self.status = status
+        # Conditions for shutdown (list of dicts, e.g., {"type": "battery", "threshold": 20})
+        self.conditions = self.settings.get("conditions", [])
 
     def to_dict(self):
         """Convert a Device instance to a dictionary for JSON storage."""
@@ -44,6 +46,28 @@ class Device:
             settings=data.get("settings", {}),
         )
 
+    def should_shutdown(self, battery_level: int, runtime_left: Optional[int] = None, load_percent: Optional[int] = None) -> bool:
+        """
+        Determine whether this device should shut down based on its defined conditions.
+        Args:
+            battery_level: Current UPS battery percentage.
+            runtime_left: Estimated UPS runtime in minutes (optional).
+            load_percent: Current UPS load percentage (optional).
+        Returns:
+            bool: True if shutdown conditions are met, otherwise False.
+        """
+        for condition in self.conditions:
+            ctype = condition.get("type")
+            threshold = condition.get("threshold")
+
+            if ctype == "battery" and battery_level <= threshold:
+                return True
+            elif ctype == "runtime" and runtime_left is not None and runtime_left <= threshold:
+                return True
+            elif ctype == "load" and load_percent is not None and load_percent >= threshold:
+                return True
+        return False
+
 
 # Helper function for dropdowns
 def create_option_menu(parent: tk.Widget, variable: tk.StringVar, options, column: int, row: int, columnspan: int = 1):
@@ -55,7 +79,6 @@ def create_option_menu(parent: tk.Widget, variable: tk.StringVar, options, colum
     menu.grid(column=column, row=row, columnspan=columnspan, sticky='we', padx=5, pady=10)
     return menu
 
-# DeviceWindow class for displaying device information in a new window
 
 # DeviceWindow class for displaying device information in a new window
 class DeviceWindow:
@@ -99,10 +122,12 @@ class DeviceWindow:
 
         # Threshold Entry
         self.threshold_var = tk.StringVar()
-        threshold_label = tk.Label(frame, text="Shutoff Threshold (%)", font=("Garamond", 18), bg="light gray", fg="black")
+        threshold_label = tk.Label(frame, text="Shutoff Threshold", font=("Garamond", 18), bg="light gray", fg="black")
         threshold_label.grid(row=3, column=0, columnspan=2, sticky="w", pady=10)
         threshold_entry = tk.Entry(frame, textvariable=self.threshold_var)
         threshold_entry.grid(row=3, column=2, columnspan=2, sticky="w", padx=10, pady=10)
+        threshold_instructions_label = tk.Label(frame, text="if protection offline is a condition, select 1 for yes, 0 for no", font=("Garamond", 18), bg="light gray", fg="black")
+        threshold_label.grid(row=4, column=0, columnspan=2, sticky="w", pady=10)
 
         # Save Settings Button
         save_settings_button = tk.Button(
