@@ -127,7 +127,7 @@ class DeviceWindow:
         threshold_entry = tk.Entry(frame, textvariable=self.threshold_var)
         threshold_entry.grid(row=3, column=2, columnspan=2, sticky="w", padx=10, pady=10)
         threshold_protection_instruction_label = tk.Label(frame, text="if protection offline is a condition, select 1 for yes, 0 for no", font=("Garamond", 18), bg="light gray", fg="black")
-        threshold_label.grid(row=4, column=0, columnspan=2, sticky="w", pady=10)
+        threshold_protection_instruction_label.grid(row=4, column=0, columnspan=2, sticky="w", pady=10)
 
         # Save Settings Button
         save_settings_button = tk.Button(
