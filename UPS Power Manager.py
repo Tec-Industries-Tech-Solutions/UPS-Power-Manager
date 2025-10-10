@@ -91,9 +91,9 @@ class DeviceWindow:
         self.window.geometry("2560x1440")
         self.window.grid_rowconfigure(0, weight=1)
         self.window.grid_columnconfigure(0, weight=1)
-        self.build_ui()
+        self.build_gui()
 
-    def build_ui(self):
+    def build_gui(self):
         """Build the device settings UI."""
         frame = tk.Frame(self.window, bg="#DCDAD6", padx=20, pady=20)
         frame.grid(row=0, column=0, sticky="nsew")
@@ -112,7 +112,7 @@ class DeviceWindow:
         # Settings Section
         tk.Label(frame, text="Settings", font=("Garamond", 30), bg="light gray", fg="black").grid(row=0, column=4, columnspan=2, sticky="w", pady=10)
         tk.Label(frame, text="Select condition for shutdown", font=("Garamond", 20), bg="light gray", fg="black").grid(row=1, column=4, columnspan=2, sticky="w", pady=10)
-
+        
         # Listbox for shutdown condition
         self.shutdown_condition_listbox = tk.Listbox(frame)
         self.shutdown_condition_listbox.grid(row=2, column=4, columnspan=2, sticky="nsew", padx=10, pady=10)  # Consistent sticky
@@ -127,30 +127,55 @@ class DeviceWindow:
         threshold_entry = tk.Entry(frame, textvariable=self.threshold_var)
         threshold_entry.grid(row=3, column=2, columnspan=2, sticky="w", padx=10, pady=10)
         threshold_protection_instruction_label = tk.Label(frame, text="if protection offline is a condition, select 1 for yes, 0 for no", font=("Garamond", 18), bg="light gray", fg="black")
-        threshold_protection_instruction_label.grid(row=4, column=0, columnspan=2, sticky="w", pady=10)
-
+        threshold_protection_instruction_label.grid(row=4, column=0, columnspan=2)
+        
         # Save Settings Button
-        save_settings_button = tk.Button(
-            frame,
-            text="Save Settings",
-            command=self.save_settings,
-            font=("Garamond", 18),
-            bg="light gray",
-            fg="black",
-            activebackground="black",
-            activeforeground="light gray"
-        )
-        save_settings_button.grid(row=4, column=0, columnspan=6, sticky="ew", pady=20)
+        save_settings_button = tk.Button(frame, text="Save Settings", command=self.save_settings, font=("Garamond", 18), bg="light gray", fg="black", activebackground="black", activeforeground="light gray")
+        save_settings_button.grid(row=5, column=0, columnspan=6, sticky="ew", pady=20)
 
     def save_settings(self):
-        """Save device settings from the UI."""
+        """
+        Save device settings from the UI.
+
+        This method sets two new instance variables:
+        - self.selected_threshold: holds the numeric threshold entered by the user.
+        - self.selected_condition: holds the string name of the condition selected from the listbox.
+        You can access these variables later to retrieve the user's last selections.
+        """
         try:
+            # Get the threshold value
             threshold = int(self.threshold_var.get())
-            if 0 <= threshold <= 100:
+            self.selected_threshold = threshold  # Store threshold in an instance variable
+
+            # Get selected condition from listbox
+            selected_condition = self.shutdown_condition_listbox.get(tk.ACTIVE)
+            self.selected_condition = selected_condition  # Store selected condition in an instance variable
+
+            # Map user-friendly names to internal condition types
+            condition_type_map = {
+                "Battery Percentage": "battery",
+                "UPS Time left": "runtime",
+                "UPS load": "load",
+                "Elapsed time on battery": "elapsed_time",
+                "Protection offline": "protection"
+            }
+
+            condition_type = condition_type_map.get(selected_condition)
+
+            if condition_type:
+                # Create and store the condition
+                condition = {"type": condition_type, "threshold": threshold}
+                self.device.conditions.append(condition)
+                self.device.settings["conditions"] = self.device.conditions
+
+                # Also store the raw threshold in settings for reference
                 self.device.settings["shutoff_threshold"] = threshold
-                print(f"Shutoff threshold set to {threshold}% for device {self.device.name}")
+
+                print(f"Saved shutdown condition for {self.device.name}: {condition}")
+                messagebox.showinfo("Settings Saved", f"Condition '{selected_condition}' with threshold {threshold} saved.")
             else:
-                messagebox.showerror("Invalid Value", "Please enter a value between 0 and 100.")
+                messagebox.showerror("Invalid Condition", "Please select a valid shutdown condition.")
+
         except ValueError:
             messagebox.showerror("Invalid Input", "Please enter a valid number.")
 
@@ -484,7 +509,7 @@ device_window_button.grid(column=5, row=5, columnspan=1, padx=0, pady=10)
 device_window_button.config(width=12)
 
 # Footer label at the bottom of the UI
-footer_label = tk.Label(root, text=f"Version {VERSION} — Last updated {LAST_UPDATE}", font=("Garamond", 12), bg="light gray", fg="gray")
+footer_label = tk.Label(root, text=f"Version Beta {VERSION} — Last updated {LAST_UPDATE}", font=("Garamond", 12), bg="light gray", fg="gray")
 footer_label.grid(row=99, column=0, sticky=tk.W, padx=10, pady=5)
 
 # Run the Tkinter event loop with exception handling
