@@ -85,6 +85,8 @@ class DeviceWindow:
     """Window to display and edit settings for a specific device."""
     def __init__(self, root, device: Device):
         self.device = device
+        self.selected_condition = "None"
+        self.selected_threshold = "N/A"
         self.window = tk.Toplevel(root)
         self.window.configure(bg="#DCDAD6")
         self.window.title(f"Device {device.number}: {device.name}")
@@ -126,12 +128,33 @@ class DeviceWindow:
         threshold_label.grid(row=3, column=0, columnspan=2, sticky="w", pady=10)
         threshold_entry = tk.Entry(frame, textvariable=self.threshold_var)
         threshold_entry.grid(row=3, column=2, columnspan=2, sticky="w", padx=10, pady=10)
-        threshold_protection_instruction_label = tk.Label(frame, text="if protection offline is a condition, select 1 for yes, 0 for no", font=("Garamond", 18), bg="light gray", fg="black")
-        threshold_protection_instruction_label.grid(row=4, column=0, columnspan=2)
-        
+
+        # Threshold info display using instance variables for later update
+        self.threshold_condition_label = tk.Label(frame, text=f'Threshhold condition: {self.selected_condition}', bg="light gray", fg="black")
+        self.threshold_condition_label.grid(row=4, column=0, columnspan=1, sticky="w")
+        if self.selected_condition == "UPS Time left":
+            self.threshold_value_label = tk.Label(frame, text=f'Threshhold value: {self.selected_threshold} min', bg="light gray", fg="black")
+            self.threshold_value_label.grid(row=5, column=0, columnspan=1, sticky="w")
+        else:
+            if self.selected_condition == "Battery Percentage":
+                self.threshold_value_label = tk.Label(frame, text=f'Threshhold value: {self.selected_threshold}%', bg="light gray", fg="black")
+                self.threshold_value_label.grid(row=5, column=0, columnspan=1, sticky="w")
+            else:
+                if self.selected_condition == "Elapsed time on battery":
+                    self.threshold_value_label = tk.Label(frame, text=f'Threshhold value: {self.selected_threshold} min', bg="light gray", fg="black")
+                    self.threshold_value_label.grid(row=5, column=0, columnspan=1, sticky="w")
+                else:
+                    if self.selected_condition == "UPS load":
+                        self.threshold_value_label = tk.Label(frame, text=f'Threshhold value: {self.selected_threshold}%', bg="light gray", fg="black")
+                        self.threshold_value_label.grid(row=5, column=0, columnspan=1, sticky="w")
+                    else: 
+                        self.threshold_value_label = tk.Label(frame, text=f'Threshhold value: {self.selected_threshold} min', bg="light gray", fg="black")
+                        self.threshold_value_label.grid(row=5, column=0, columnspan=1, sticky="w")
+
+
         # Save Settings Button
         save_settings_button = tk.Button(frame, text="Save Settings", command=self.save_settings, font=("Garamond", 18), bg="light gray", fg="black", activebackground="black", activeforeground="light gray")
-        save_settings_button.grid(row=5, column=0, columnspan=6, sticky="ew", pady=20)
+        save_settings_button.grid(row=6, column=0, columnspan=6, sticky="ew", pady=20)
 
     def save_settings(self):
         """
@@ -173,6 +196,9 @@ class DeviceWindow:
 
                 print(f"Saved shutdown condition for {self.device.name}: {condition}")
                 messagebox.showinfo("Settings Saved", f"Condition '{selected_condition}' with threshold {threshold} saved.")
+                # Update displayed threshold info
+                self.threshold_condition_label.config(text=f"Threshhold condition: {self.selected_condition}")
+                self.threshold_value_label.config(text=f"Threshhold value: {self.selected_threshold}")
             else:
                 messagebox.showerror("Invalid Condition", "Please select a valid shutdown condition.")
 
@@ -279,10 +305,10 @@ device_window_option = tk.StringVar()
 device_window_option.set("-") #Set the default value
 
 # Create the device name dropdown (drop-down box) using helper
-device_selection_dropdown = create_option_menu(mainframe, device_selected_option, ["-"], column=4, row=1, columnspan=1)
-device_window_dropdown = create_option_menu(mainframe, device_window_option, ["-"], column=4, row=5)
+device_selection_dropdown = create_option_menu(mainframe, device_selected_option, ["-"], column=5, row=1, columnspan=1)
+device_window_dropdown = create_option_menu(mainframe, device_window_option, ["-"], column=5, row=5)
 device_window_dropdown.config(width=12)
-device_window_dropdown.grid(sticky='w', padx=5, pady=10)
+device_window_dropdown.grid(sticky='e', padx=5, pady=10)
 
 
 def update_device_dropdown() -> None:
@@ -505,12 +531,8 @@ def remove_device() -> None:
 
 # Create button to open device window
 device_window_button = ttk.Button(mainframe, text="Device Window", command=open_device_window)
-device_window_button.grid(column=5, row=5, columnspan=1, padx=0, pady=10)
-device_window_button.config(width=12)
-
-# Footer label at the bottom of the UI
-footer_label = tk.Label(root, text=f"Version Beta {VERSION} — Last updated {LAST_UPDATE}", font=("Garamond", 12), bg="light gray", fg="gray")
-footer_label.grid(row=99, column=0, sticky=tk.W, padx=10, pady=5)
+device_window_button.grid(column=5, row=5, columnspan=2, padx=0, pady=10)
+device_window_button.config(width=24)
 
 # Run the Tkinter event loop with exception handling
 try:
