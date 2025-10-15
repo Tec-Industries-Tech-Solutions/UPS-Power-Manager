@@ -128,28 +128,31 @@ class DeviceWindow:
         threshold_label.grid(row=3, column=0, columnspan=2, sticky="w", pady=10)
         threshold_entry = tk.Entry(frame, textvariable=self.threshold_var)
         threshold_entry.grid(row=3, column=2, columnspan=2, sticky="w", padx=10, pady=10)
+        
+        
+
+        # Determine current condition type before threshold display
+        if self.device.conditions:
+            last_condition = self.device.conditions[-1]
+            condition_type = last_condition.get("type", "")
+        else:
+            condition_type = ""
 
         # Threshold info display using instance variables for later update
         self.threshold_condition_label = tk.Label(frame, text=f'Threshhold condition: {self.selected_condition}', bg="light gray", fg="black")
         self.threshold_condition_label.grid(row=4, column=0, columnspan=1, sticky="w")
-        if self.selected_condition == "UPS Time left":
+        if "runtime" in condition_type:
             self.threshold_value_label = tk.Label(frame, text=f'Threshhold value: {self.selected_threshold} min', bg="light gray", fg="black")
-            self.threshold_value_label.grid(row=5, column=0, columnspan=1, sticky="w")
+        elif "battery" in condition_type:
+            self.threshold_value_label = tk.Label(frame, text=f'Threshhold value: {self.selected_threshold}%', bg="light gray", fg="black")
+        elif "elapsed_time" in condition_type:
+            self.threshold_value_label = tk.Label(frame, text=f'Threshhold value: {self.selected_threshold} min', bg="light gray", fg="black")
+        elif "load" in condition_type:
+            self.threshold_value_label = tk.Label(frame, text=f'Threshhold value: {self.selected_threshold}%', bg="light gray", fg="black")
         else:
-            if self.selected_condition == "Battery Percentage":
-                self.threshold_value_label = tk.Label(frame, text=f'Threshhold value: {self.selected_threshold}%', bg="light gray", fg="black")
-                self.threshold_value_label.grid(row=5, column=0, columnspan=1, sticky="w")
-            else:
-                if self.selected_condition == "Elapsed time on battery":
-                    self.threshold_value_label = tk.Label(frame, text=f'Threshhold value: {self.selected_threshold} min', bg="light gray", fg="black")
-                    self.threshold_value_label.grid(row=5, column=0, columnspan=1, sticky="w")
-                else:
-                    if self.selected_condition == "UPS load":
-                        self.threshold_value_label = tk.Label(frame, text=f'Threshhold value: {self.selected_threshold}%', bg="light gray", fg="black")
-                        self.threshold_value_label.grid(row=5, column=0, columnspan=1, sticky="w")
-                    else: 
-                        self.threshold_value_label = tk.Label(frame, text=f'Threshhold value: {self.selected_threshold} min', bg="light gray", fg="black")
-                        self.threshold_value_label.grid(row=5, column=0, columnspan=1, sticky="w")
+            self.threshold_value_label = tk.Label(frame, text=f'Threshhold value: {self.selected_threshold} min', bg="light gray", fg="black")
+
+        self.threshold_value_label.grid(row=5, column=0, columnspan=1, sticky="w")
 
 
         # Save Settings Button
