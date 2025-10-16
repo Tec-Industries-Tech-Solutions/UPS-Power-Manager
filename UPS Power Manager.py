@@ -37,7 +37,7 @@ class Device:
     @staticmethod
     def from_dict(data):
         """Convert dictionary data back to a Device instance."""
-        return Device(
+        device = Device(
             number=data["number"],
             name=data["name"],
             port=data["port"],
@@ -45,6 +45,8 @@ class Device:
             logs=data.get("logs", []),
             settings=data.get("settings", {}),
         )
+        device.conditions = device.settings.get("conditions", [])
+        return device
 
     def should_shutdown(self, battery_level: int, runtime_left: Optional[int] = None, load_percent: Optional[int] = None) -> bool:
         """
@@ -87,6 +89,11 @@ class DeviceWindow:
         self.device = device
         self.selected_condition = "None"
         self.selected_threshold = "N/A"
+        # Inserted: Set selected_condition and selected_threshold from last condition if present
+        if self.device.conditions:
+            last_condition = self.device.conditions[-1]
+            self.selected_condition = last_condition.get("type", "None")
+            self.selected_threshold = last_condition.get("threshold", "N/A")
         self.window = tk.Toplevel(root)
         self.window.configure(bg="#DCDAD6")
         self.window.title(f"Device {device.number}: {device.name}")
@@ -118,7 +125,7 @@ class DeviceWindow:
         # Listbox for shutdown condition
         self.shutdown_condition_listbox = tk.Listbox(frame)
         self.shutdown_condition_listbox.grid(row=2, column=4, columnspan=2, sticky="nsew", padx=10, pady=10)  # Consistent sticky
-        items = ["UPS Time left", "Battery Percentage", "Elapsed time on battery", "UPS load", "Protection offline"]
+        items = ["UPS Time left", "Battery Percentage", "Elapsed time on battery", "UPS load", "Protection offline(1 for yes, 0 for no)"]
         for item in items:
             self.shutdown_condition_listbox.insert(tk.END, item)
 
@@ -128,32 +135,42 @@ class DeviceWindow:
         threshold_label.grid(row=3, column=0, columnspan=2, sticky="w", pady=10)
         threshold_entry = tk.Entry(frame, textvariable=self.threshold_var)
         threshold_entry.grid(row=3, column=2, columnspan=2, sticky="w", padx=10, pady=10)
-        
-        
 
         # Determine current condition type before threshold display
         if self.device.conditions:
             last_condition = self.device.conditions[-1]
-            condition_type = last_condition.get("type", "")
+            self.condition_type = last_condition.get("type", "")
+            self.selected_threshold = last_condition.get("threshold", "N/A")
         else:
-            condition_type = ""
+            self.condition_type = ""
+
+        # Inserted: Friendly name mapping and friendly_name selection
+        friendly_name_map = {
+            "battery": "Battery Percentage",
+            "runtime": "UPS Time left",
+            "load": "UPS Load",
+            "elapsed_time": "Elapsed Time on Battery",
+            "protection": "Protection Offline"
+        }
+        friendly_name = friendly_name_map.get(self.condition_type, "Unknown")
 
         # Threshold info display using instance variables for later update
-        self.threshold_condition_label = tk.Label(frame, text=f'Threshhold condition: {self.selected_condition}', bg="light gray", fg="black")
+        self.threshold_condition_label = tk.Label(frame, text=f"Threshold condition: {friendly_name}", bg="light gray", fg="black")
         self.threshold_condition_label.grid(row=4, column=0, columnspan=1, sticky="w")
-        if "runtime" in condition_type:
-            self.threshold_value_label = tk.Label(frame, text=f'Threshhold value: {self.selected_threshold} min', bg="light gray", fg="black")
-        elif "battery" in condition_type:
-            self.threshold_value_label = tk.Label(frame, text=f'Threshhold value: {self.selected_threshold}%', bg="light gray", fg="black")
-        elif "elapsed_time" in condition_type:
-            self.threshold_value_label = tk.Label(frame, text=f'Threshhold value: {self.selected_threshold} min', bg="light gray", fg="black")
-        elif "load" in condition_type:
-            self.threshold_value_label = tk.Label(frame, text=f'Threshhold value: {self.selected_threshold}%', bg="light gray", fg="black")
+        print(self.condition_type)
+        if "runtime" in self.condition_type:
+            text = f"Threshhold value: {self.selected_threshold} min"
+        elif "battery" in self.condition_type:
+            text = f"Threshhold value: {self.selected_threshold}%"
+        elif "elapsed_time" in self.condition_type:
+            text = f"Threshhold value: {self.selected_threshold} min"
+        elif "load" in self.condition_type:
+            text = f"Threshhold value: {self.selected_threshold}%"
         else:
-            self.threshold_value_label = tk.Label(frame, text=f'Threshhold value: {self.selected_threshold} min', bg="light gray", fg="black")
+            text = f"Threshhold value: {self.selected_threshold} min"
 
+        self.threshold_value_label = tk.Label(frame, text=text, bg="light gray", fg="black")
         self.threshold_value_label.grid(row=5, column=0, columnspan=1, sticky="w")
-
 
         # Save Settings Button
         save_settings_button = tk.Button(frame, text="Save Settings", command=self.save_settings, font=("Garamond", 18), bg="light gray", fg="black", activebackground="black", activeforeground="light gray")
@@ -183,13 +200,15 @@ class DeviceWindow:
                 "UPS Time left": "runtime",
                 "UPS load": "load",
                 "Elapsed time on battery": "elapsed_time",
-                "Protection offline": "protection"
+                "Protection offline(1 for yes, 0 for no)": "protection"
             }
 
             condition_type = condition_type_map.get(selected_condition)
 
             if condition_type:
                 # Create and store the condition
+                if "protection" in condition_type:
+                    threshold = 1 if threshold >= 1 else 0  # Binary for protection offline
                 condition = {"type": condition_type, "threshold": threshold}
                 self.device.conditions.append(condition)
                 self.device.settings["conditions"] = self.device.conditions
@@ -199,9 +218,24 @@ class DeviceWindow:
 
                 print(f"Saved shutdown condition for {self.device.name}: {condition}")
                 messagebox.showinfo("Settings Saved", f"Condition '{selected_condition}' with threshold {threshold} saved.")
-                # Update displayed threshold info
-                self.threshold_condition_label.config(text=f"Threshhold condition: {self.selected_condition}")
-                self.threshold_value_label.config(text=f"Threshhold value: {self.selected_threshold}")
+                # Update displayed threshold info with correct units
+                if "runtime" in condition_type or "elapsed_time" in condition_type:
+                    text = f"Threshold value: {threshold} min"
+                elif "battery" in condition_type or "load" in condition_type:
+                    text = f"Threshold value: {threshold}%"
+                else:
+                    if threshold == 1:
+                        text = "Threshold value: yes"
+                    else:
+                        text = "Threshold value: no"
+
+                friendly_name = [k for k, v in condition_type_map.items() if v == condition_type]
+                friendly_name = friendly_name[0] if friendly_name else condition_type
+                self.threshold_condition_label.config(text=f"Threshold condition: {friendly_name}")
+                self.threshold_value_label.config(text=text)
+                # Persist updated settings to disk
+                from __main__ import save_devices
+                save_devices()
             else:
                 messagebox.showerror("Invalid Condition", "Please select a valid shutdown condition.")
 
@@ -356,11 +390,14 @@ def show_selection() -> None:
         messagebox.showerror("Invalid Selection", "Please select a valid device count.")
         return
     result_label.config(text=f"{devices_count} devices are connected to the UPS")
-    device_objects = []
-    for i in range(devices_count):
-        device = Device(i + 1, f"Device_{i+1}", f"Port_{i+1}", status="Disconnected")
-        device_objects.append(device)
-        print("Creating device:", i+1)
+    # Only recreate devices if there are none loaded
+    if not device_objects:
+        for i in range(devices_count):
+            device = Device(i + 1, f"Device_{i+1}", f"Port_{i+1}", status="Disconnected")
+            device_objects.append(device)
+            print("Creating device:", i+1)
+    else:
+        print("Devices already loaded, skipping recreation.")
     if device_objects:
         update_device_dropdown()
     save_devices()
