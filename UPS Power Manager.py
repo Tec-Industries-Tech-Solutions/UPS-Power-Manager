@@ -1,13 +1,15 @@
+# I dont delete other peoples code just because im not the one writing it but I will leave sugestions (: - Chase R
+
 # Constants
 UPS_NAME = "ups"
 VERSION = "1.0.3"
-LAST_UPDATE = "2025-10-03"
+LAST_UPDATE = "2025-10-03" #Github Tracks this
 
 #Import Libaries 
 import os
 import sys
 import tkinter as tk
-from tkinter import ttk, filedialog, messagebox
+from tkinter import ttk, filedialog, messagebox # You import all of tkinter on the line above so this line is not needed
 import subprocess
 import json
 from typing import Optional
@@ -243,9 +245,9 @@ class DeviceWindow:
             messagebox.showerror("Invalid Input", "Please enter a valid number.")
 
 
-# Constants
-SAVE_FILE = "device_data.json"  # File for storage
-
+# Constants 
+SAVE_FILE = "device_data.json"  # File for storage 
+# You have a area for constants in the very top of the code if you want to move it there for organization purposes but it does not really matter 
 
 def save_devices():
     """Save device list to a JSON file with error handling.
@@ -579,9 +581,3 @@ try:
     root.mainloop()
 except Exception as e:
     print(f"UI error: {e}")
-
-
-
-
-
-
