@@ -25,7 +25,7 @@ public class App {
 
         // Use try-with-resources for Scanner (IDE hint resolved)
         try (Scanner input = new Scanner(System.in)) {
-            System.out.println("Enter temperature unit (C or F):");
+            System.out.println("Enter temperature unit (C, K, or F):");
             tempUnit = input.nextLine();
 
             System.out.println("Enter UPS IP address:");
@@ -41,15 +41,20 @@ public class App {
         // Normalize input
         tempUnit = tempUnit.toUpperCase().substring(0, 1);
 
-        boolean change = false;
+        boolean changeF = false;
+        boolean changeK = false;
 
-        if (!tempUnit.equals("C") && !tempUnit.equals("F")) {
+        if (!tempUnit.equals("C") && !tempUnit.equals("F") && !tempUnit.equals("K")) {
             System.out.println("Invalid temperature unit, defaulting to C");
             tempUnit = "C";
         }
 
         if (tempUnit.equals("F")) {
-            change = true;
+            changeF = true;
+        }
+
+        if (tempUnit.equals("K")) {
+            changeK = true;
         }
 
         System.out.println("Using temperature unit: " + tempUnit);
@@ -76,6 +81,7 @@ public class App {
                     int batteryTempC = getInt(snmp, target, "1.3.6.1.2.1.33.1.2.7.0");
                     int batteryUptimecs = getInt(snmp, target, "1.3.6.1.2.1.33.1.2.8.0");
                     int upsLoad = getInt(snmp, target, "1.3.6.1.2.1.33.1.4.4.1.5");
+                    int batteryTimeRemaining = getInt(snmp, target, "1.3.6.1.2.1.33.1.2.3");
 
                     // Convert centiseconds → seconds
                     int batteryUptimeSeconds = batteryUptimecs / 100;
@@ -83,29 +89,40 @@ public class App {
                     // Break into time units
                     int years = batteryUptimeSeconds / 31536000;
                     batteryUptimeSeconds %= 31536000;
+                    int yearsBT = batteryTimeRemaining / 525600;
+                    batteryTimeRemaining %= 525600;
 
                     int days = batteryUptimeSeconds / 86400;
                     batteryUptimeSeconds %= 86400;
+                    int daysBT = batteryTimeRemaining / 1440;
+                    batteryTimeRemaining %= 1440;
 
                     int hours = batteryUptimeSeconds / 3600;
                     batteryUptimeSeconds %= 3600;
+                    int hoursBT = batteryTimeRemaining / 60;
+                    batteryTimeRemaining %= 60;
 
                     int minutes = batteryUptimeSeconds / 60;
+                    int minutesBT = batteryTimeRemaining;
+
                     int seconds = batteryUptimeSeconds % 60;
 
                     String tempDisplay;
-                    if (change) {
+                    if (changeF) {
                         int batteryTempF = (batteryTempC * 9 / 5) + 32;
                         tempDisplay = batteryTempF + "°F";
+                    } else if (changeK) {
+                        double batteryTempK = (batteryTempC + 273.15);
+                        tempDisplay = batteryTempK + "°K";
                     } else {
                         tempDisplay = batteryTempC + "°C";
                     }
-
                     //Print values
                     System.out.println("-----------------------------");
                     System.out.println("Battery Charge: " + batteryCharge + "%");
                     System.out.println("Battery Temp: " + tempDisplay); 
                     System.out.println("Time on Battery: " + years + "y " + days + "d " + hours + "h " + minutes + "m " + seconds + "s");
+                    System.out.println("Time Remaing on Battery: " + yearsBT + "y " + daysBT + "d " + hoursBT + "h " + minutesBT + "m ");
                     System.out.println("UPS Load: " + upsLoad + "%");
 
                     // Intentional sleep to control polling rate (IDE warning resolved)
