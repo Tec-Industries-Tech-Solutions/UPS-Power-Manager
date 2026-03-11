@@ -18,10 +18,16 @@ public class App {
 
     public static void main(String[] args) throws Exception {
 
+        //Define variables
         String tempUnit;
         String upsIP;
         String upsPort;
         int refreshTime;
+        int batteryLowPowerThreshold;
+        String batteryLowPower="No";
+        String batteryFailure = "No";
+        double batteryTempThreshold;
+        String batteryOverHeat = "No";
 
         // Use try-with-resources for Scanner (IDE hint resolved)
         try (Scanner input = new Scanner(System.in)) {
@@ -36,7 +42,14 @@ public class App {
 
             System.out.println("Enter refresh time in seconds:");
             refreshTime = input.nextInt();
-        }
+            
+            System.out.println("Enter Low power threshold");
+            batteryLowPowerThreshold = input.nextInt();
+        
+            System.out.println("Enter tempature threshold");
+            batteryTempThreshold = input.nextInt();
+        } 
+
         
         // Normalize input
         tempUnit = tempUnit.toUpperCase().substring(0, 1);
@@ -77,11 +90,21 @@ public class App {
 
                 while (true) {
 
+                    //Get UPS data
                     int batteryCharge = getInt(snmp, target, "1.3.6.1.2.1.33.1.2.4.0");
                     int batteryTempC = getInt(snmp, target, "1.3.6.1.2.1.33.1.2.7.0");
                     int batteryUptimecs = getInt(snmp, target, "1.3.6.1.2.1.33.1.2.8.0");
-                    int upsLoad = getInt(snmp, target, "1.3.6.1.2.1.33.1.4.4.1.5");
-                    int batteryTimeRemaining = getInt(snmp, target, "1.3.6.1.2.1.33.1.2.3");
+                    int upsLoad = getInt(snmp, target, "1.3.6.1.2.1.33.1.4.4.1.5.1");
+                    int batteryTimeRemaining = getInt(snmp, target, "1.3.6.1.2.1.33.1.2.3.0");
+                    for (int i = 1; i <= 20; i++) {
+                        String alarm = getString(snmp, target, "1.3.6.1.2.1.33.1.6.2.1.2." + i);
+
+                        if (alarm == null) continue;
+
+                        if (alarm.equals("upsAlarmBatteryBad")) {
+                        batteryFailure = "Yes";
+                        }
+                    }
 
                     // Convert centiseconds → seconds
                     int batteryUptimeSeconds = batteryUptimecs / 100;
@@ -106,24 +129,45 @@ public class App {
                     int minutesBT = batteryTimeRemaining;
 
                     int seconds = batteryUptimeSeconds % 60;
+                    
+                    double tempCompare ;
 
                     String tempDisplay;
                     if (changeF) {
-                        int batteryTempF = (batteryTempC * 9 / 5) + 32;
+                        double batteryTempF = (batteryTempC * 9 / 5) + 32;
                         tempDisplay = batteryTempF + "°F";
+                        tempCompare = batteryTempF;
+                        
                     } else if (changeK) {
                         double batteryTempK = (batteryTempC + 273.15);
                         tempDisplay = batteryTempK + "°K";
+                        tempCompare = batteryTempK;
                     } else {
                         tempDisplay = batteryTempC + "°C";
+                        tempCompare = batteryTempC;
+                    }
+
+                    //Check if battery is low
+                    if (batteryCharge <= batteryLowPowerThreshold){
+                        batteryLowPower = "Yes";
+                    }
+
+                    //Check if battery is too hot
+                    if (tempCompare >= batteryTempThreshold){
+                        batteryOverHeat = "Yes";
                     }
                     //Print values
+                    //Monitoring
                     System.out.println("-----------------------------");
                     System.out.println("Battery Charge: " + batteryCharge + "%");
                     System.out.println("Battery Temp: " + tempDisplay); 
                     System.out.println("Time on Battery: " + years + "y " + days + "d " + hours + "h " + minutes + "m " + seconds + "s");
                     System.out.println("Time Remaing on Battery: " + yearsBT + "y " + daysBT + "d " + hoursBT + "h " + minutesBT + "m ");
                     System.out.println("UPS Load: " + upsLoad + "%");
+                    //Warnings
+                    System.out.println("Battery Low Power: " + batteryLowPower);
+                    System.out.println("Battery Failure: " + batteryFailure);
+                    System.out.println("Battery too hot: " + batteryOverHeat);
 
                     // Intentional sleep to control polling rate (IDE warning resolved)
                     TimeUnit.SECONDS.sleep(refreshTime);
@@ -133,17 +177,51 @@ public class App {
     }
 
     private static int getInt(Snmp snmp, CommunityTarget<UdpAddress> target, String oid) throws Exception {
-        PDU pdu = new PDU();
-        pdu.add(new VariableBinding(new OID(oid)));
-        pdu.setType(PDU.GET);
+    PDU pdu = new PDU();
+    pdu.add(new VariableBinding(new OID(oid)));
+    pdu.setType(PDU.GET);
 
-        ResponseEvent<UdpAddress> response = snmp.get(pdu, target);
+    ResponseEvent<UdpAddress> response = snmp.get(pdu, target);
 
-        if (response != null && response.getResponse() != null) {
-            String value = response.getResponse().get(0).getVariable().toString();
-            return Integer.parseInt(value);
+    if (response != null && response.getResponse() != null) {
+        String value = response.getResponse().get(0).getVariable().toString();
+
+        // Prevent crashes on missing OIDs
+        if (value.equalsIgnoreCase("noSuchInstance") ||
+            value.equalsIgnoreCase("noSuchObject") ||
+            value.equalsIgnoreCase("endOfMibView")) {
+            return -1; // sentinel value meaning "missing"
         }
 
-        return -1;
+        return Integer.parseInt(value);
     }
+
+    return -1;
+}
+
+
+    private static String getString(Snmp snmp, CommunityTarget<UdpAddress> target, String oid) throws Exception { 
+        PDU pdu = new PDU(); 
+        pdu.add(new VariableBinding(new OID(oid))); 
+        pdu.setType(PDU.GET); 
+        
+        ResponseEvent<UdpAddress> response = snmp.get(pdu, target); 
+        
+        if (response != null && response.getResponse() != null) { 
+            VariableBinding vb = response.getResponse().get(0); 
+            String value = vb.getVariable().toString(); 
+            
+            // Handle missing OIDs 
+            if (value.equalsIgnoreCase("noSuchInstance") || 
+                value.equalsIgnoreCase("noSuchObject") || 
+                value.equalsIgnoreCase("endOfMibView")) { 
+                return null; 
+            } 
+            
+            return value; 
+        } 
+        
+        return null; 
+    }
+    
 }
